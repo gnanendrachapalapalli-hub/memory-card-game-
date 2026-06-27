@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory Match</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --bg: #0f0e17;
+    --surface: #1a1830;
+    --card-back: #2d2b55;
+    --card-front: #fffffe;
+    --accent: #ff8906;
+    --accent2: #e53170;
+    --accent3: #3da9fc;
+    --text: #fffffe;
+    --muted: #a7a9be;
+    --success: #2cb67d;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 16px 40px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .game-title {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.8rem, 5vw, 2.8rem);
+    font-weight: 700;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+
+  .game-subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  select {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid #3d3b6e;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+  }
+
+  select:focus { border-color: var(--accent3); }
+
+  .btn {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  .stats {
+    display: flex;
+    gap: 28px;
+    margin-bottom: 24px;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--accent3);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .board {
+    display: grid;
+    gap: 10px;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .board.grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .board.grid-5 { grid-template-columns: repeat(5, 1fr); }
+  .board.grid-6 { grid-template-columns: repeat(6, 1fr); }
+
+  .card {
+    aspect-ratio: 1;
+    perspective: 600px;
+    cursor: pointer;
+  }
+
+  .card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: var(--radius);
+  }
+
+  .card.flipped .card-inner,
+  .card.matched .card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1.4rem, 5vw, 2.4rem);
+    user-select: none;
+  }
+
+  .card-back {
+    background: var(--card-back);
+    border: 2px solid #3d3b6e;
+    background-image: 
+      radial-gradient(circle at 30% 30%, rgba(61,169,252,0.08) 0%, transparent 60%),
+      radial-gradient(circle at 70% 70%, rgba(229,49,112,0.08) 0%, transparent 60%);
+  }
+
+  .card-back::after {
+    content: '?';
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(1.1rem, 4vw, 1.8rem);
+    font-weight: 700;
+    color: #4a487a;
+  }
+
+  .card-front {
+    background: var(--surface);
+    border: 2px solid #3d3b6e;
+    transform: rotateY(180deg);
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card.matched .card-front {
+    border-color: var(--success);
+    background: #1a2e25;
+    animation: matchPop 0.35s ease forwards;
+  }
+
+  @keyframes matchPop {
+    0% { transform: rotateY(180deg) scale(1); }
+    50% { transform: rotateY(180deg) scale(1.08); }
+    100% { transform: rotateY(180deg) scale(1); }
+  }
+
+  .card:not(.flipped):not(.matched):hover .card-inner {
+    transform: rotateY(8deg);
+  }
+
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,22,0.88);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .overlay.active { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid #3d3b6e;
+    border-radius: 20px;
+    padding: 40px 36px;
+    text-align: center;
+    max-width: 340px;
+    width: 90%;
+  }
+
+  .modal-emoji { font-size: 3.5rem; margin-bottom: 16px; }
+
+  .modal-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+
+  .modal-body {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
+
+  .modal-body strong {
+    color: var(--accent3);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .progress-bar {
+    width: 100%;
+    max-width: 560px;
+    height: 6px;
+    background: var(--surface);
+    border-radius: 99px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent3), var(--accent));
+    border-radius: 99px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="game-title">Memory Match</div>
+  <div class="game-subtitle">Find every pair</div>
+</header>
+
+<div class="controls">
+  <select id="difficulty">
+    <option value="easy">Easy — 4×4</option>
+    <option value="medium" selected>Medium — 4×5</option>
+    <option value="hard">Hard — 5×6</option>
+  </select>
+  <button class="btn" onclick="startGame()">New Game</button>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-value" id="moves">0</div>
+    <div class="stat-label">Moves</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="timer">0:00</div>
+    <div class="stat-label">Time</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="pairs">0/0</div>
+    <div class="stat-label">Pairs</div>
+  </div>
+</div>
+
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<div class="board" id="board"></div>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-emoji">🎉</div>
+    <div class="modal-title">You Won!</div>
+    <div class="modal-body" id="modal-body"></div>
+    <button class="btn" onclick="startGame(); document.getElementById('overlay').classList.remove('active')">Play Again</button>
+  </div>
+</div>
+
+<script>
+const EMOJI_POOL = [
+  '🐶','🐱','🦊','🐻','🐼','🦁','🐯','🐨','🐸','🦋',
+  '🌸','🌺','🌻','🍀','🍁','🍄','🌈','⚡','🔥','❄️',
+  '🎸','🎹','🎺','🎻','🥁','🎮','🕹️','🎯','🎪','🎭',
+  '🍕','🍔','🌮','🍩','🍦','🎂','🍓','🍉','🥑','🍋'
+];
+
+const CONFIGS = {
+  easy:   { cols: 4, total: 16 },
+  medium: { cols: 4, total: 20 },
+  hard:   { cols: 5, total: 30 }
+};
+
+let state = {
+  cards: [],
+  flipped: [],
+  matched: 0,
+  moves: 0,
+  locked: false,
+  timer: null,
+  seconds: 0,
+  total: 0
+};
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function startGame() {
+  const diff = document.getElementById('difficulty').value;
+  const config = CONFIGS[diff];
+  const half = config.total / 2;
+
+  clearInterval(state.timer);
+  state = { cards: [], flipped: [], matched: 0, moves: 0, locked: false, timer: null, seconds: 0, total: half };
+
+  const emojis = shuffle([...EMOJI_POOL]).slice(0, half);
+  const pairs = shuffle([...emojis, ...emojis]);
+
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  board.className = `board grid-${config.cols}`;
+
+  pairs.forEach((emoji, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.emoji = emoji;
+    card.dataset.index = i;
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="card-face card-back"></div>
+        <div class="card-face card-front">${emoji}</div>
+      </div>`;
+    card.addEventListener('click', () => flipCard(card));
+    board.appendChild(card);
+  });
+
+  updateStats();
+  startTimer();
+}
+
+function flipCard(card) {
+  if (state.locked) return;
+  if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+  if (state.flipped.length >= 2) return;
+
+  card.classList.add('flipped');
+  state.flipped.push(card);
+
+  if (state.flipped.length === 2) {
+    state.moves++;
+    state.locked = true;
+    checkMatch();
+  }
+
+  updateStats();
+}
+
+function checkMatch() {
+  const [a, b] = state.flipped;
+  if (a.dataset.emoji === b.dataset.emoji) {
+    a.classList.add('matched');
+    b.classList.add('matched');
+    state.matched++;
+    state.flipped = [];
+    state.locked = false;
+    updateStats();
+
+    if (state.matched === state.total) {
+      setTimeout(showWin, 400);
+    }
+  } else {
+    setTimeout(() => {
+      a.classList.remove('flipped');
+      b.classList.remove('flipped');
+      state.flipped = [];
+      state.locked = false;
+    }, 900);
+  }
+}
+
+function startTimer() {
+  state.seconds = 0;
+  clearInterval(state.timer);
+  state.timer = setInterval(() => {
+    state.seconds++;
+    const m = Math.floor(state.seconds / 60);
+    const s = String(state.seconds % 60).padStart(2, '0');
+    document.getElementById('timer').textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+function updateStats() {
+  document.getElementById('moves').textContent = state.moves;
+  document.getElementById('pairs').textContent = `${state.matched}/${state.total}`;
+  const pct = state.total ? (state.matched / state.total) * 100 : 0;
+  document.getElementById('progress').style.width = pct + '%';
+}
+
+function showWin() {
+  clearInterval(state.timer);
+  const m = Math.floor(state.seconds / 60);
+  const s = String(state.seconds % 60).padStart(2, '0');
+  document.getElementById('modal-body').innerHTML =
+    `You matched all <strong>${state.total}</strong> pairs in <strong>${state.moves}</strong> moves and <strong>${m}:${s}</strong>!`;
+  document.getElementById('overlay').classList.add('active');
+}
+
+startGame();
+</script>
+</body>
+</html>
